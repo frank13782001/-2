@@ -1,0 +1,2023 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>绚丽烟花</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        canvas {
+            display: block;
+            flex-grow: 1;
+        }
+        
+        .trigger-area {
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.8));
+            padding-bottom: 15px;
+        }
+        
+        .trigger-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        
+        .firework-icon {
+            position: relative;
+            width: 80px;
+            height: 120px;
+            cursor: pointer;
+            transition: transform 0.3s ease, filter 0.3s ease;
+            filter: drop-shadow(0 0 10px rgba(255, 100, 50, 0.5));
+            transform-origin: center bottom;
+        }
+        
+        .firework-icon:hover {
+            transform: scale(1.05) rotate(5deg);
+            filter: drop-shadow(0 0 15px rgba(255, 150, 50, 0.8));
+        }
+        
+        .firework-icon:active {
+            transform: scale(0.95) rotate(-5deg);
+        }
+        
+        .firework-top {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 50px;
+            background: linear-gradient(135deg, #ff00ff, #9900ff);
+            clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+            border-radius: 5px 5px 0 0;
+            box-shadow: 0 0 10px rgba(153, 0, 255, 0.5);
+            z-index: 2;
+        }
+        
+        .firework-top:before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 10px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.7);
+            clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+            filter: blur(2px);
+        }
+        
+        .firework-body {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 60px;
+            background: #ffcc00;
+            border-radius: 2px;
+            overflow: hidden;
+            z-index: 1;
+        }
+        
+        .firework-stripe {
+            position: absolute;
+            width: 100%;
+            height: 12px;
+            background: #ff3366;
+        }
+        
+        .firework-stripe:nth-child(1) {
+            top: 10px;
+        }
+        
+        .firework-stripe:nth-child(2) {
+            top: 34px;
+        }
+        
+        .firework-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 30px;
+            background: linear-gradient(to bottom, #33ccff, #3366ff);
+            border-radius: 5px;
+            z-index: 0;
+            overflow: hidden;
+        }
+        
+        .firework-decoration {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+        }
+        
+        .firework-decoration:nth-child(1) {
+            top: 5px;
+            left: 5px;
+            background: #ff9900;
+        }
+        
+        .firework-decoration:nth-child(2) {
+            top: 5px;
+            right: 5px;
+            background: #ff3366;
+        }
+        
+        .firework-decoration:nth-child(3) {
+            bottom: 5px;
+            left: 10px;
+            background: #ffcc00;
+        }
+        
+        .firework-decoration:nth-child(4) {
+            bottom: 5px;
+            right: 10px;
+            background: #33ff66;
+        }
+        
+        .firework-fuse {
+            position: absolute;
+            top: 10px;
+            right: -10px;
+            width: 20px;
+            height: 3px;
+            background: #999;
+            border-radius: 3px;
+            transform: rotate(-30deg);
+            transform-origin: left center;
+        }
+        
+        .fuse-spark {
+            position: absolute;
+            top: -3px;
+            right: -3px;
+            width: 8px;
+            height: 8px;
+            background: radial-gradient(circle, #ffff00, #ff6600);
+            border-radius: 50%;
+            filter: blur(1px);
+            animation: spark 0.6s infinite alternate;
+        }
+        
+        @keyframes spark {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(1.2); opacity: 1; }
+        }
+        
+        .trigger-text {
+            color: #ffffff;
+            font-size: 16px;
+            text-align: center;
+            opacity: 0.9;
+            margin-top: 10px;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+            transition: opacity 0.3s ease;
+        }
+        
+        .firework-icon:hover + .trigger-text {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="fireworks"></canvas>
+    <div class="trigger-area">
+        <div class="trigger-container">
+            <div class="firework-icon" id="launchButton">
+                <div class="firework-top"></div>
+                <div class="firework-body">
+                    <div class="firework-stripe"></div>
+                    <div class="firework-stripe"></div>
+                </div>
+                <div class="firework-bottom">
+                    <div class="firework-decoration"></div>
+                    <div class="firework-decoration"></div>
+                    <div class="firework-decoration"></div>
+                    <div class="firework-decoration"></div>
+                </div>
+                <div class="firework-fuse">
+                    <div class="fuse-spark"></div>
+                </div>
+            </div>
+        </div>
+        <div class="trigger-text">点击发射烟花</div>
+    </div>
+
+    <script>
+        // 获取画布和上下文
+        const canvas = document.getElementById('fireworks');
+        const ctx = canvas.getContext('2d');
+        const launchButton = document.getElementById('launchButton');
+        
+        // 设置画布大小
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - 80; // 减去触发区域的高度
+        }
+        
+        // 初始化
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        // 烟花粒子类
+        class Particle {
+            constructor(x, y, color, velocity, gravity, fade, size, shape = 'circle') {
+                this.x = x;
+                this.y = y;
+                this.originalSize = size || Math.random() * 3 + 1;
+                this.size = this.originalSize;
+                this.color = color;
+                this.velocity = velocity;
+                this.gravity = gravity || 0.05;
+                this.fade = fade || 0.01;
+                this.alpha = 1;
+                this.friction = 0.98;
+                this.shape = shape;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.1;
+                this.oscillation = Math.random() > 0.5;
+                this.oscillationSpeed = Math.random() * 0.05 + 0.025;
+                this.oscillationDistance = Math.random() * 5 + 2;
+                this.originalX = x;
+            }
+            
+            update() {
+                this.velocity.x *= this.friction;
+                this.velocity.y *= this.friction;
+                this.velocity.y += this.gravity;
+                
+                // 添加摆动效果
+                if (this.oscillation) {
+                    this.x = this.originalX + Math.sin(Date.now() * this.oscillationSpeed) * this.oscillationDistance;
+                    this.originalX += this.velocity.x;
+                } else {
+                    this.x += this.velocity.x;
+                }
+                
+                this.y += this.velocity.y;
+                this.alpha -= this.fade;
+                this.size = Math.max(0, this.size - 0.03);
+                this.rotation += this.rotationSpeed;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                
+                if (this.shape === 'circle') {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.shape === 'star') {
+                    this.drawStar(0, 0, 5, this.size, this.size / 2);
+                } else if (this.shape === 'heart') {
+                    this.drawHeart(0, 0, this.size);
+                } else if (this.shape === 'square') {
+                    ctx.fillRect(-this.size, -this.size, this.size * 2, this.size * 2);
+                }
+                
+                ctx.restore();
+            }
+            
+            drawStar(cx, cy, spikes, outerRadius, innerRadius) {
+                let rot = Math.PI / 2 * 3;
+                let x = cx;
+                let y = cy;
+                let step = Math.PI / spikes;
+                
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - outerRadius);
+                
+                for (let i = 0; i < spikes; i++) {
+                    x = cx + Math.cos(rot) * outerRadius;
+                    y = cy + Math.sin(rot) * outerRadius;
+                    ctx.lineTo(x, y);
+                    rot += step;
+                    
+                    x = cx + Math.cos(rot) * innerRadius;
+                    y = cy + Math.sin(rot) * innerRadius;
+                    ctx.lineTo(x, y);
+                    rot += step;
+                }
+                
+                ctx.lineTo(cx, cy - outerRadius);
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            drawHeart(x, y, size) {
+                ctx.beginPath();
+                ctx.moveTo(x, y - size / 2);
+                ctx.bezierCurveTo(
+                    x, y - size, 
+                    x - size, y - size, 
+                    x - size, y
+                );
+                ctx.bezierCurveTo(
+                    x - size, y + size / 2, 
+                    x, y + size, 
+                    x, y + size / 2
+                );
+                ctx.bezierCurveTo(
+                    x, y + size, 
+                    x + size, y + size / 2, 
+                    x + size, y
+                );
+                ctx.bezierCurveTo(
+                    x + size, y - size, 
+                    x, y - size, 
+                    x, y - size / 2
+                );
+                ctx.fill();
+            }
+        }
+        
+        // 烟花类
+        class Firework {
+            constructor(x, y, targetX, targetY, color, particleCount, type = 'normal', isFinale = false) {
+                this.x = x;
+                this.y = y;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.color = color || getRandomColor();
+                this.particleCount = particleCount || Math.floor(Math.random() * 50) + 50;
+                this.speed = 5;
+                this.angle = Math.atan2(targetY - y, targetX - x);
+                this.velocity = {
+                    x: Math.cos(this.angle) * this.speed,
+                    y: Math.sin(this.angle) * this.speed
+                };
+                this.particles = [];
+                this.trail = [];
+                this.exploded = false;
+                this.type = type;
+                this.hue = Math.random() * 360;
+                this.hueDelta = Math.random() * 10 + 5;
+                this.secondaryExplosion = Math.random() > 0.5;
+                this.secondaryTimer = 0;
+                this.secondaryDelay = Math.random() * 500 + 500;
+                this.isFinale = isFinale; // 是否为终章特效
+                
+                // 如果是终章特效，增加粒子寿命和大小
+                if (this.isFinale) {
+                    this.particleLifeReduction = 0.005; // 减慢粒子消失速度
+                    this.particleSize = 3; // 增大粒子尺寸
+                }
+            }
+            
+            update() {
+                if (!this.exploded) {
+                    this.x += this.velocity.x;
+                    this.y += this.velocity.y;
+                    
+                    // 添加轨迹
+                    this.trail.push({
+                        x: this.x,
+                        y: this.y,
+                        alpha: 1,
+                        size: Math.random() * 2 + 1
+                    });
+                    
+                    // 更新轨迹
+                    for (let i = 0; i < this.trail.length; i++) {
+                        this.trail[i].alpha -= 0.03;
+                        this.trail[i].size *= 0.96;
+                    }
+                    
+                    // 移除透明度为0的轨迹点
+                    this.trail = this.trail.filter(point => point.alpha > 0);
+                    
+                    // 检查是否到达目标点
+                    const distance = Math.hypot(this.targetX - this.x, this.targetY - this.y);
+                    if (distance < 5) {
+                        this.explode();
+                    }
+                } else if (this.secondaryExplosion && !this.secondaryExploded) {
+                    this.secondaryTimer += 16; // 假设16ms每帧
+                    if (this.secondaryTimer >= this.secondaryDelay) {
+                        this.createSecondaryExplosion();
+                        this.secondaryExploded = true;
+                    }
+                }
+                
+                // 更新粒子
+                for (let i = 0; i < this.particles.length; i++) {
+                    this.particles[i].update();
+                }
+                
+                // 移除透明度为0的粒子
+                this.particles = this.particles.filter(particle => particle.alpha > 0);
+            }
+            
+            draw() {
+                if (!this.exploded) {
+                    // 绘制轨迹
+                    for (const point of this.trail) {
+                        ctx.save();
+                        ctx.globalAlpha = point.alpha;
+                        ctx.fillStyle = this.color;
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, point.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                    
+                    // 绘制烟花本体
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // 绘制粒子
+                for (const particle of this.particles) {
+                    particle.draw();
+                }
+            }
+            
+            explode() {
+                this.exploded = true;
+                
+                // 根据类型创建不同的爆炸效果
+                switch(this.type) {
+                    case 'normal':
+                        this.createCircleExplosion();
+                        break;
+                    case 'ring':
+                        this.createRingExplosion();
+                        break;
+                    case 'burst':
+                        this.createBurstExplosion();
+                        break;
+                    case 'heart':
+                        this.createHeartExplosion();
+                        break;
+                    case 'spiral':
+                        this.createSpiralExplosion();
+                        break;
+                    case 'multi':
+                        this.createMultiColorExplosion();
+                        break;
+                    case 'stars':
+                        this.createStarExplosion();
+                        break;
+                    case 'super':
+                        this.createSuperExplosion();
+                        break;
+                    default:
+                        this.createCircleExplosion();
+                }
+                
+                // 播放爆炸音效
+                playExplosionSound(this.type);
+                
+                // 如果是终章特效，增加爆炸规模和复杂度
+                if (this.isFinale) {
+                    // 增加二次爆炸概率
+                    this.hasSecondaryExplosion = true;
+                    this.secondaryExplosionDelay = 30;
+                    
+                    // 增加粒子数量
+                    this.particleCount *= 1.5;
+                    
+                    // 增加爆炸半径
+                    this.explosionRadius *= 1.5;
+                }
+            }
+            
+            createCircleExplosion() {
+                for (let i = 0; i < this.particleCount; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 5 + 1;
+                    const size = Math.random() * 3 + 1;
+                    
+                    // 随机选择颜色变化
+                    let particleColor = this.color;
+                    if (Math.random() > 0.7) {
+                        particleColor = getRandomColor();
+                    }
+                    
+                    const shapes = ['circle', 'star', 'square'];
+                    const shape = shapes[Math.floor(Math.random() * shapes.length)];
+                    
+                    this.particles.push(new Particle(
+                        this.x,
+                        this.y,
+                        particleColor,
+                        {
+                            x: Math.cos(angle) * speed,
+                            y: Math.sin(angle) * speed
+                        },
+                        0.05,
+                        0.01,
+                        size,
+                        shape
+                    ));
+                }
+            }
+            
+            createRingExplosion() {
+                const rings = Math.floor(Math.random() * 3) + 2;
+                const particlesPerRing = Math.floor(this.particleCount / rings);
+                
+                for (let r = 0; r < rings; r++) {
+                    const ringSpeed = 2 + r * 1.5;
+                    const ringColor = `hsl(${(this.hue + r * this.hueDelta) % 360}, 100%, 60%)`;
+                    
+                    for (let i = 0; i < particlesPerRing; i++) {
+                        const angle = (i / particlesPerRing) * Math.PI * 2;
+                        const size = Math.random() * 2 + 1;
+                        
+                        this.particles.push(new Particle(
+                            this.x,
+                            this.y,
+                            ringColor,
+                            {
+                                x: Math.cos(angle) * ringSpeed,
+                                y: Math.sin(angle) * ringSpeed
+                            },
+                            0.03,
+                            0.01,
+                            size
+                        ));
+                    }
+                }
+            }
+            
+            createBurstExplosion() {
+                const burstCount = Math.floor(Math.random() * 5) + 3;
+                const angleStep = Math.PI * 2 / burstCount;
+                
+                for (let b = 0; b < burstCount; b++) {
+                    const burstAngle = b * angleStep;
+                    const burstColor = `hsl(${(this.hue + b * 30) % 360}, 100%, 60%)`;
+                    
+                    for (let i = 0; i < this.particleCount / burstCount; i++) {
+                        const deviation = (Math.random() - 0.5) * 0.5;
+                        const angle = burstAngle + deviation;
+                        const speed = Math.random() * 4 + 2;
+                        const size = Math.random() * 3 + 1;
+                        
+                        this.particles.push(new Particle(
+                            this.x,
+                            this.y,
+                            burstColor,
+                            {
+                                x: Math.cos(angle) * speed,
+                                y: Math.sin(angle) * speed
+                            },
+                            0.04,
+                            0.01,
+                            size
+                        ));
+                    }
+                }
+            }
+            
+            createHeartExplosion() {
+                const particlesCount = Math.min(this.particleCount, 200);
+                const heartSize = 10;
+                
+                for (let i = 0; i < particlesCount; i++) {
+                    // 创建心形分布
+                    const t = i / particlesCount * Math.PI * 2;
+                    const x = 16 * Math.pow(Math.sin(t), 3);
+                    const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+                    
+                    const speed = Math.random() * 0.5 + 0.5;
+                    const size = Math.random() * 2 + 1;
+                    
+                    this.particles.push(new Particle(
+                        this.x,
+                        this.y,
+                        this.color,
+                        {
+                            x: x * speed * 0.2,
+                            y: y * speed * 0.2
+                        },
+                        0.01,
+                        0.005,
+                        size,
+                        'heart'
+                    ));
+                }
+            }
+            
+            createSpiralExplosion() {
+                const arms = Math.floor(Math.random() * 3) + 2;
+                const particlesPerArm = Math.floor(this.particleCount / arms);
+                
+                for (let a = 0; a < arms; a++) {
+                    const armOffset = (a / arms) * Math.PI * 2;
+                    const armColor = `hsl(${(this.hue + a * 50) % 360}, 100%, 60%)`;
+                    
+                    for (let i = 0; i < particlesPerArm; i++) {
+                        const distance = (i / particlesPerArm) * 5 + 1;
+                        const angle = armOffset + i * 0.15;
+                        const size = Math.max(3 - (i / particlesPerArm) * 2, 1);
+                        
+                        this.particles.push(new Particle(
+                            this.x,
+                            this.y,
+                            armColor,
+                            {
+                                x: Math.cos(angle) * distance,
+                                y: Math.sin(angle) * distance
+                            },
+                            0.02,
+                            0.01,
+                            size
+                        ));
+                    }
+                }
+            }
+            
+            createMultiColorExplosion() {
+                const layers = Math.floor(Math.random() * 3) + 3;
+                const particlesPerLayer = Math.floor(this.particleCount / layers);
+                
+                for (let l = 0; l < layers; l++) {
+                    const layerSpeed = 1 + l * 1.2;
+                    const layerColor = `hsl(${(this.hue + l * 30) % 360}, 100%, 60%)`;
+                    const layerDelay = l * 100; // 毫秒
+                    
+                    setTimeout(() => {
+                        for (let i = 0; i < particlesPerLayer; i++) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const speed = layerSpeed + Math.random() * 2;
+                            const size = Math.random() * 3 + 1;
+                            
+                            this.particles.push(new Particle(
+                                this.x,
+                                this.y,
+                                layerColor,
+                                {
+                                    x: Math.cos(angle) * speed,
+                                    y: Math.sin(angle) * speed
+                                },
+                                0.04,
+                                0.01,
+                                size
+                            ));
+                        }
+                    }, layerDelay);
+                }
+            }
+            
+            createStarExplosion() {
+                for (let i = 0; i < this.particleCount; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 5 + 1;
+                    const size = Math.random() * 3 + 1;
+                    
+                    this.particles.push(new Particle(
+                        this.x,
+                        this.y,
+                        this.color,
+                        {
+                            x: Math.cos(angle) * speed,
+                            y: Math.sin(angle) * speed
+                        },
+                        0.05,
+                        0.01,
+                        size,
+                        'star'
+                    ));
+                }
+            }
+            
+            createSecondaryExplosion() {
+                // 从现有粒子中选择一些作为二次爆炸的起点
+                const secondaryCount = Math.min(Math.floor(this.particles.length * 0.2), 10);
+                
+                for (let i = 0; i < secondaryCount; i++) {
+                    if (this.particles.length > 0) {
+                        const index = Math.floor(Math.random() * this.particles.length);
+                        const particle = this.particles[index];
+                        
+                        // 创建小型爆炸
+                        const miniCount = Math.floor(Math.random() * 20) + 10;
+                        const miniColor = `hsl(${(this.hue + 180) % 360}, 100%, 60%)`;
+                        
+                        for (let j = 0; j < miniCount; j++) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const speed = Math.random() * 3 + 0.5;
+                            const size = Math.random() * 2 + 0.5;
+                            
+                            this.particles.push(new Particle(
+                                particle.x,
+                                particle.y,
+                                miniColor,
+                                {
+                                    x: Math.cos(angle) * speed,
+                                    y: Math.sin(angle) * speed
+                                },
+                                0.03,
+                                0.02,
+                                size
+                            ));
+                        }
+                    }
+                }
+            }
+            
+            createSuperExplosion() {
+                // 超级爆炸 - 多层次、多颜色、多形状
+                const colors = ['#ff0000', '#ffaa00', '#ffff00', '#00ff00', '#00ffff', '#0088ff', '#ff00ff', '#ffffff'];
+                const shapes = ['circle', 'star', 'square', 'heart'];
+                
+                // 创建多层爆炸
+                for (let layer = 0; layer < 4; layer++) {
+                    const layerCount = this.particleCount / 4;
+                    const layerRadius = (layer + 1) * this.explosionRadius / 4;
+                    const layerColor = colors[layer % colors.length];
+                    const layerShape = shapes[layer % shapes.length];
+                    
+                    for (let i = 0; i < layerCount; i++) {
+                        const angle = (i / layerCount) * Math.PI * 2;
+                        const speed = 1 + Math.random() * 3 + layer;
+                        
+                        const velocity = {
+                            x: Math.cos(angle) * speed,
+                            y: Math.sin(angle) * speed
+                        };
+                        
+                        this.particles.push(new Particle(
+                            this.x,
+                            this.y,
+                            layerColor,
+                            velocity,
+                            0.03 + layer * 0.01,
+                            0.005 + layer * 0.002,
+                            2 + Math.random() * 2,
+                            layerShape
+                        ));
+                    }
+                }
+                
+                // 添加一些随机飞散的大粒子
+                for (let i = 0; i < this.particleCount / 8; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 2 + Math.random() * 5;
+                    
+                    const velocity = {
+                        x: Math.cos(angle) * speed,
+                        y: Math.sin(angle) * speed
+                    };
+                    
+                    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                    const randomShape = shapes[Math.floor(Math.random() * shapes.length)];
+                    
+                    this.particles.push(new Particle(
+                        this.x,
+                        this.y,
+                        randomColor,
+                        velocity,
+                        0.02,
+                        0.003,
+                        3 + Math.random() * 3,
+                        randomShape
+                    ));
+                }
+            }
+            
+            isFinished() {
+                return this.exploded && this.particles.length === 0;
+            }
+        }
+        
+        // 获取随机颜色
+        function getRandomColor() {
+            const colors = [
+                '#ff0000', '#ff3300', '#ff6600', '#ff9900', '#ffcc00', 
+                '#ffff00', '#ccff00', '#99ff00', '#66ff00', '#33ff00', 
+                '#00ff00', '#00ff33', '#00ff66', '#00ff99', '#00ffcc', 
+                '#00ffff', '#00ccff', '#0099ff', '#0066ff', '#0033ff', 
+                '#0000ff', '#3300ff', '#6600ff', '#9900ff', '#cc00ff', 
+                '#ff00ff', '#ff00cc', '#ff0099', '#ff0066', '#ff0033'
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        // 烟花数组
+        const fireworks = [];
+        
+        // 音效系统
+        let audioContext;
+        let audioEnabled = false;
+        let masterGain;
+        let backgroundMusic;
+        
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                audioEnabled = true;
+                
+                // 创建主音量控制
+                masterGain = audioContext.createGain();
+                masterGain.gain.value = 0.3; // 控制整体音量
+                masterGain.connect(audioContext.destination);
+                
+                // 加载背景音乐
+                loadBackgroundMusic();
+                
+            } catch (e) {
+                console.log('Web Audio API not supported');
+            }
+        }
+        
+        function loadBackgroundMusic() {
+            // 创建一个简单的背景音乐
+            backgroundMusic = audioContext.createGain();
+            backgroundMusic.gain.value = 0.15; // 背景音乐音量较低
+            backgroundMusic.connect(masterGain);
+            
+            // 创建一个柔和的背景音乐
+            const notes = [
+                { note: 'E4', duration: 2.0 },
+                { note: 'A4', duration: 2.0 },
+                { note: 'B4', duration: 2.0 },
+                { note: 'G4', duration: 2.0 },
+                { note: 'A4', duration: 2.0 },
+                { note: 'D5', duration: 2.0 },
+                { note: 'C5', duration: 2.0 },
+                { note: 'A4', duration: 2.0 }
+            ];
+            
+            const noteToFreq = {
+                'C4': 261.63, 'C#4': 277.18, 'D4': 293.66, 'D#4': 311.13, 'E4': 329.63, 'F4': 349.23,
+                'F#4': 369.99, 'G4': 392.00, 'G#4': 415.30, 'A4': 440.00, 'A#4': 466.16, 'B4': 493.88,
+                'C5': 523.25, 'C#5': 554.37, 'D5': 587.33, 'D#5': 622.25, 'E5': 659.25, 'F5': 698.46,
+                'F#5': 739.99, 'G5': 783.99, 'G#5': 830.61, 'A5': 880.00, 'A#5': 932.33, 'B5': 987.77
+            };
+            
+            let startTime = audioContext.currentTime + 0.5;
+            
+            function playArpeggio() {
+                notes.forEach((note, index) => {
+                    const freq = noteToFreq[note.note];
+                    const noteTime = startTime + index * 2.0;
+                    
+                    // 创建主音符
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = freq;
+                    
+                    gainNode.gain.setValueAtTime(0, noteTime);
+                    gainNode.gain.linearRampToValueAtTime(0.1, noteTime + 0.1);
+                    gainNode.gain.linearRampToValueAtTime(0.05, noteTime + 0.3);
+                    gainNode.gain.linearRampToValueAtTime(0, noteTime + note.duration);
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(backgroundMusic);
+                    
+                    oscillator.start(noteTime);
+                    oscillator.stop(noteTime + note.duration);
+                    
+                    // 添加泛音
+                    const harmonicOsc = audioContext.createOscillator();
+                    const harmonicGain = audioContext.createGain();
+                    
+                    harmonicOsc.type = 'sine';
+                    harmonicOsc.frequency.value = freq * 1.5; // 泛音
+                    
+                    harmonicGain.gain.setValueAtTime(0, noteTime);
+                    harmonicGain.gain.linearRampToValueAtTime(0.03, noteTime + 0.1);
+                    harmonicGain.gain.linearRampToValueAtTime(0, noteTime + note.duration);
+                    
+                    harmonicOsc.connect(harmonicGain);
+                    harmonicGain.connect(backgroundMusic);
+                    
+                    harmonicOsc.start(noteTime);
+                    harmonicOsc.stop(noteTime + note.duration);
+                    
+                    // 添加琶音效果
+                    for (let i = 0; i < 3; i++) {
+                        const arpOsc = audioContext.createOscillator();
+                        const arpGain = audioContext.createGain();
+                        
+                        arpOsc.type = 'sine';
+                        arpOsc.frequency.value = freq * (1 + (i * 0.5));
+                        
+                        arpGain.gain.setValueAtTime(0, noteTime + i * 0.2);
+                        arpGain.gain.linearRampToValueAtTime(0.02, noteTime + i * 0.2 + 0.05);
+                        arpGain.gain.linearRampToValueAtTime(0, noteTime + i * 0.2 + 0.5);
+                        
+                        arpOsc.connect(arpGain);
+                        arpGain.connect(backgroundMusic);
+                        
+                        arpOsc.start(noteTime + i * 0.2);
+                        arpOsc.stop(noteTime + i * 0.2 + 0.5);
+                    }
+                });
+                
+                // 更新下一组音符的开始时间
+                startTime += notes.length * 2.0;
+                
+                // 安排下一次播放
+                setTimeout(playArpeggio, notes.length * 2000);
+            }
+            
+            // 开始播放背景音乐
+            playArpeggio();
+        }
+        
+        function playExplosionSound(type = 'normal') {
+            if (!audioEnabled || !audioContext) return;
+            
+            // 根据烟花类型选择不同的音效
+            switch(type) {
+                case 'normal':
+                    playChimeSound();
+                    break;
+                case 'ring':
+                    playBellSound();
+                    break;
+                case 'burst':
+                    playHarpSound();
+                    break;
+                case 'heart':
+                    playMusicBoxSound();
+                    break;
+                case 'spiral':
+                    playWindChimeSound();
+                    break;
+                case 'multi':
+                    playKalimbaSound();
+                    break;
+                case 'stars':
+                    playGlockenspielSound();
+                    break;
+                default:
+                    playChimeSound();
+            }
+        }
+        
+        function playChimeSound() {
+            // 风铃音效 - 更自然的音色
+            const baseFreq = 880;
+            const notes = [baseFreq, baseFreq * 1.2, baseFreq * 1.5, baseFreq * 1.8];
+            
+            notes.forEach((freq, i) => {
+                setTimeout(() => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    const filter = audioContext.createBiquadFilter();
+                    
+                    oscillator.connect(filter);
+                    filter.connect(gainNode);
+                    gainNode.connect(masterGain);
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = freq;
+                    
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 2000;
+                    filter.Q.value = 1;
+                    
+                    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.08, audioContext.currentTime + 0.01);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 2.0);
+                    
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 2.0);
+                    
+                    // 添加泛音
+                    const harmonicOsc = audioContext.createOscillator();
+                    const harmonicGain = audioContext.createGain();
+                    
+                    harmonicOsc.connect(gainNode);
+                    harmonicOsc.type = 'sine';
+                    harmonicOsc.frequency.value = freq * 2;
+                    
+                    harmonicGain.gain.setValueAtTime(0, audioContext.currentTime);
+                    harmonicGain.gain.linearRampToValueAtTime(0.02, audioContext.currentTime + 0.01);
+                    harmonicGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1.5);
+                    
+                    harmonicOsc.start();
+                    harmonicOsc.stop(audioContext.currentTime + 1.5);
+                }, i * 150);
+            });
+        }
+        
+        function playBellSound() {
+            // 铃铛音效 - 更自然的音色
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            const filter = audioContext.createBiquadFilter();
+            
+            oscillator.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(masterGain);
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.value = 523.25; // C5
+            
+            filter.type = 'bandpass';
+            filter.frequency.value = 800;
+            filter.Q.value = 2;
+            
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 3.0);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 3.0);
+            
+            // 添加泛音
+            setTimeout(() => {
+                const harmonicOsc = audioContext.createOscillator();
+                const harmonicGain = audioContext.createGain();
+                const harmonicFilter = audioContext.createBiquadFilter();
+                
+                harmonicOsc.connect(harmonicFilter);
+                harmonicFilter.connect(harmonicGain);
+                harmonicGain.connect(masterGain);
+                
+                harmonicOsc.type = 'sine';
+                harmonicOsc.frequency.value = 783.99; // G5
+                
+                harmonicFilter.type = 'bandpass';
+                harmonicFilter.frequency.value = 1200;
+                harmonicFilter.Q.value = 2;
+                
+                harmonicGain.gain.setValueAtTime(0.1, audioContext.currentTime);
+                harmonicGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 2.5);
+                
+                harmonicOsc.start();
+                harmonicOsc.stop(audioContext.currentTime + 2.5);
+            }, 50);
+            
+            // 添加第三个泛音
+            setTimeout(() => {
+                const harmonicOsc2 = audioContext.createOscillator();
+                const harmonicGain2 = audioContext.createGain();
+                
+                harmonicOsc2.connect(harmonicGain2);
+                harmonicGain2.connect(masterGain);
+                
+                harmonicOsc2.type = 'sine';
+                harmonicOsc2.frequency.value = 1046.50; // C6
+                
+                harmonicGain2.gain.setValueAtTime(0.05, audioContext.currentTime);
+                harmonicGain2.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 2.0);
+                
+                harmonicOsc2.start();
+                harmonicOsc2.stop(audioContext.currentTime + 2.0);
+            }, 100);
+        }
+        
+        function playHarpSound() {
+            // 竖琴音效 - 更自然的琶音
+            const notes = [
+                { note: 'C4', time: 0 },
+                { note: 'E4', time: 0.1 },
+                { note: 'G4', time: 0.2 },
+                { note: 'C5', time: 0.3 },
+                { note: 'E5', time: 0.4 },
+                { note: 'G5', time: 0.5 },
+                { note: 'C6', time: 0.6 }
+            ];
+            
+            const noteToFreq = {
+                'C4': 261.63, 'E4': 329.63, 'G4': 392.00,
+                'C5': 523.25, 'E5': 659.25, 'G5': 783.99, 'C6': 1046.50
+            };
+            
+            notes.forEach(note => {
+                setTimeout(() => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    const filter = audioContext.createBiquadFilter();
+                    
+                    oscillator.connect(filter);
+                    filter.connect(gainNode);
+                    gainNode.connect(masterGain);
+                    
+                    oscillator.type = 'triangle';
+                    oscillator.frequency.value = noteToFreq[note.note];
+                    
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 3000;
+                    
+                    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.07, audioContext.currentTime + 0.01);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1.5);
+                    
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 1.5);
+                }, note.time * 1000);
+            });
+        }
+        
+        function playMusicBoxSound() {
+            // 八音盒音效 - 更柔和的音色
+            const notes = [
+                { note: 'G4', time: 0 },
+                { note: 'B4', time: 0.15 },
+                { note: 'D5', time: 0.3 },
+                { note: 'G5', time: 0.45 },
+                { note: 'B5', time: 0.6 }
+            ];
+            
+            const noteToFreq = {
+                'G4': 392.00, 'B4': 493.88, 'D5': 587.33, 'G5': 783.99, 'B5': 987.77
+            };
+            
+            notes.forEach(note => {
+                setTimeout(() => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    const filter = audioContext.createBiquadFilter();
+                    
+                    oscillator.connect(filter);
+                    filter.connect(gainNode);
+                    gainNode.connect(masterGain);
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = noteToFreq[note.note];
+                    
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 2000;
+                    
+                    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.05, audioContext.currentTime + 0.05);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1.2);
+                    
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 1.2);
+                }, note.time * 1000);
+            });
+        }
+        
+        function playWindChimeSound() {
+            // 风铃音效 - 更自然的随机音色
+            const baseNotes = ['A5', 'C6', 'E6', 'G6'];
+            const noteToFreq = {
+                'A5': 880.00, 'C6': 1046.50, 'E6': 1318.51, 'G6': 1567.98
+            };
+            
+            const chimeCount = 5;
+            
+            for (let i = 0; i < chimeCount; i++) {
+                setTimeout(() => {
+                    const note = baseNotes[Math.floor(Math.random() * baseNotes.length)];
+                    const freq = noteToFreq[note];
+                    
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    const filter = audioContext.createBiquadFilter();
+                    
+                    oscillator.connect(filter);
+                    filter.connect(gainNode);
+                    gainNode.connect(masterGain);
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = freq;
+                    
+                    filter.type = 'highpass';
+                    filter.frequency.value = 800;
+                    
+                    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.04, audioContext.currentTime + 0.02);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 2.5);
+                    
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 2.5);
+                }, i * 200 * Math.random());
+            }
+        }
+        
+        function playKalimbaSound() {
+            // 卡林巴琴音效 - 更温暖的音色
+            const notes = [
+                { note: 'C5', time: 0 },
+                { note: 'G4', time: 0.12 },
+                { note: 'E4', time: 0.24 },
+                { note: 'C4', time: 0.36 },
+                { note: 'G4', time: 0.48 },
+                { note: 'C5', time: 0.6 }
+            ];
+            
+            const noteToFreq = {
+                'C4': 261.63, 'E4': 329.63, 'G4': 392.00, 'C5': 523.25
+            };
+            
+            notes.forEach(note => {
+                setTimeout(() => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    const filter = audioContext.createBiquadFilter();
+                    
+                    oscillator.connect(filter);
+                    filter.connect(gainNode);
+                    gainNode.connect(masterGain);
+                    
+                    oscillator.type = 'triangle';
+                    oscillator.frequency.value = noteToFreq[note.note];
+                    
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 1500;
+                    filter.Q.value = 0.7;
+                    
+                    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.08, audioContext.currentTime + 0.01);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1.0);
+                    
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 1.0);
+                }, note.time * 1000);
+            });
+        }
+        
+        function playGlockenspielSound() {
+            // 钟琴音效 - 更清脆的音色
+            const notes = ['C6', 'A5', 'G5', 'E5', 'C5'];
+            const noteToFreq = {
+                'C5': 523.25, 'E5': 659.25, 'G5': 783.99, 'A5': 880.00, 'C6': 1046.50
+            };
+            
+            notes.forEach((note, i) => {
+                setTimeout(() => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(masterGain);
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = noteToFreq[note];
+                    
+                    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.06, audioContext.currentTime + 0.01);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1.0);
+                    
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 1.0);
+                }, i * 120);
+            });
+        }
+        
+        // 烟花章节系统
+        const chapters = [
+            {
+                name: "序章",
+                duration: 6000,
+                fireworkRate: 800,
+                pattern: "sequential", // 顺序发射
+                positions: [
+                    {x: 0.25, y: 0.3},
+                    {x: 0.5, y: 0.3},
+                    {x: 0.75, y: 0.3}
+                ],
+                types: ['normal'],
+                particleCount: [50, 80],
+                colors: ['#ff5500', '#ffaa00', '#ffff00'],
+                bgColor: { r: 0, g: 0, b: 10 }
+            },
+            {
+                name: "渐进",
+                duration: 8000,
+                fireworkRate: 600,
+                pattern: "symmetrical", // 对称发射
+                types: ['ring', 'normal'],
+                particleCount: [80, 120],
+                colors: ['#00ffff', '#0088ff', '#5500ff'],
+                bgColor: { r: 5, g: 0, b: 15 }
+            },
+            {
+                name: "华彩",
+                duration: 10000,
+                fireworkRate: 400,
+                pattern: "fountain", // 喷泉式
+                types: ['burst', 'multi', 'spiral'],
+                particleCount: [100, 180],
+                colors: ['#ff00ff', '#ff0088', '#ffff00', '#0066ff'],
+                bgColor: { r: 10, g: 0, b: 20 }
+            },
+            {
+                name: "浪漫",
+                duration: 7000,
+                fireworkRate: 1000,
+                pattern: "circular", // 圆形发射
+                types: ['heart'],
+                particleCount: [150, 200],
+                colors: ['#ff0066', '#ff66cc', '#ff99cc'],
+                bgColor: { r: 20, g: 0, b: 10 }
+            },
+            {
+                name: "星空",
+                duration: 8000,
+                fireworkRate: 300,
+                pattern: "staggered", // 交错发射
+                types: ['stars', 'ring'],
+                particleCount: [80, 150],
+                colors: ['#ffffff', '#00ccff', '#0066ff', '#9900ff'],
+                bgColor: { r: 0, g: 5, b: 30 }
+            },
+            {
+                name: "终章",
+                duration: 12000,
+                fireworkRate: 200,
+                pattern: "grand_finale", // 盛大终章
+                types: ['normal', 'burst', 'multi', 'spiral', 'ring', 'stars', 'heart'],
+                particleCount: [150, 300],
+                colors: null, // 使用所有颜色
+                bgColor: { r: 15, g: 15, b: 25 }
+            }
+        ];
+        
+        let currentChapter = null;
+        let chapterTimer = 0;
+        let nextFireworkTime = 0;
+        let chapterIndex = 0;
+        let currentBgColor = { r: 0, g: 0, b: 0 };
+        let targetBgColor = { r: 0, g: 0, b: 0 };
+        let patternStep = 0;
+        let patternSubStep = 0;
+        let lastFireworkTime = 0;
+        
+        // 启动章节
+        function startChapter(index) {
+            if (index >= chapters.length) {
+                // 所有章节结束，重新启用按钮
+                document.getElementById('launchButton').style.pointerEvents = 'auto';
+                currentChapter = null;
+                return;
+            }
+            
+            currentChapter = chapters[index];
+            chapterTimer = 0;
+            nextFireworkTime = 0;
+            patternStep = 0;
+            patternSubStep = 0;
+            
+            // 设置目标背景颜色
+            targetBgColor = currentChapter.bgColor;
+            
+            // 设置下一章节
+            setTimeout(() => {
+                startChapter(index + 1);
+            }, currentChapter.duration);
+        }
+        
+        // 更新背景颜色
+        function updateBackgroundColor() {
+            if (!targetBgColor) return;
+            
+            // 平滑过渡到目标颜色
+            currentBgColor.r += (targetBgColor.r - currentBgColor.r) * 0.01;
+            currentBgColor.g += (targetBgColor.g - currentBgColor.g) * 0.01;
+            currentBgColor.b += (targetBgColor.b - currentBgColor.b) * 0.01;
+            
+            document.body.style.backgroundColor = `rgb(${Math.floor(currentBgColor.r)}, ${Math.floor(currentBgColor.g)}, ${Math.floor(currentBgColor.b)})`;
+        }
+        
+        // 更新章节系统
+        function updateChapterSystem() {
+            if (!currentChapter) return;
+            
+            chapterTimer += 16; // 假设16ms每帧
+            
+            // 更新背景颜色
+            updateBackgroundColor();
+            
+            // 检查是否应该发射新烟花
+            const currentTime = Date.now();
+            if (currentTime - lastFireworkTime >= currentChapter.fireworkRate) {
+                // 根据不同的发射模式创建烟花
+                switch(currentChapter.pattern) {
+                    case "sequential":
+                        launchSequentialFireworks();
+                        break;
+                    case "symmetrical":
+                        launchSymmetricalFireworks();
+                        break;
+                    case "fountain":
+                        launchFountainFireworks();
+                        break;
+                    case "circular":
+                        launchCircularFireworks();
+                        break;
+                    case "staggered":
+                        launchStaggeredFireworks();
+                        break;
+                    case "grand_finale":
+                        launchGrandFinaleFireworks();
+                        break;
+                    default:
+                        launchRandomFirework();
+                }
+                
+                lastFireworkTime = currentTime;
+            }
+        }
+        
+        // 顺序发射模式
+        function launchSequentialFireworks() {
+            const positions = currentChapter.positions || [
+                {x: 0.25, y: 0.3},
+                {x: 0.5, y: 0.3},
+                {x: 0.75, y: 0.3}
+            ];
+            
+            // 在预定义位置顺序发射
+            const pos = positions[patternStep % positions.length];
+            const targetX = pos.x * canvas.width;
+            const targetY = pos.y * canvas.height;
+            
+            launchFireworkAt(targetX, targetY);
+            
+            patternStep++;
+        }
+        
+        // 对称发射模式
+        function launchSymmetricalFireworks() {
+            const centerX = canvas.width / 2;
+            const offset = (patternStep % 3 + 1) * canvas.width / 8;
+            
+            // 同时发射两个对称的烟花
+            launchFireworkAt(centerX - offset, canvas.height * 0.3);
+            launchFireworkAt(centerX + offset, canvas.height * 0.3);
+            
+            patternStep++;
+        }
+        
+        // 喷泉式发射模式
+        function launchFountainFireworks() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height * 0.4;
+            const radius = 50 + patternStep * 10;
+            const angle = patternSubStep * (Math.PI * 2 / 8);
+            
+            // 从中心向外发射
+            const targetX = centerX + Math.cos(angle) * radius;
+            const targetY = centerY + Math.sin(angle) * radius;
+            
+            launchFireworkAt(targetX, targetY);
+            
+            patternSubStep++;
+            if (patternSubStep >= 8) {
+                patternSubStep = 0;
+                patternStep = (patternStep + 1) % 5;
+            }
+        }
+        
+        // 圆形发射模式
+        function launchCircularFireworks() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height * 0.4;
+            const radius = canvas.width / 4;
+            const angle = patternStep * (Math.PI * 2 / 8);
+            
+            // 在圆周上发射
+            const targetX = centerX + Math.cos(angle) * radius;
+            const targetY = centerY + Math.sin(angle) * radius;
+            
+            launchFireworkAt(targetX, targetY);
+            
+            patternStep = (patternStep + 1) % 8;
+        }
+        
+        // 交错发射模式
+        function launchStaggeredFireworks() {
+            const rows = 3;
+            const cols = 5;
+            const cellWidth = canvas.width / cols;
+            const cellHeight = canvas.height * 0.6 / rows;
+            
+            // 计算当前行列
+            const col = patternStep % cols;
+            const row = Math.floor(patternStep / cols) % rows;
+            
+            // 交错发射，形成网格
+            const targetX = cellWidth * (col + 0.5);
+            const targetY = cellHeight * (row + 0.5);
+            
+            launchFireworkAt(targetX, targetY);
+            
+            patternStep = (patternStep + 1) % (rows * cols);
+        }
+        
+        // 盛大终章模式
+        function launchGrandFinaleFireworks() {
+            // 根据子步骤决定发射模式
+            switch(patternSubStep) {
+                case 0: // 中心爆发
+                    launchFireworkAt(canvas.width / 2, canvas.height * 0.3);
+                    break;
+                case 1: // 左右对称
+                    launchFireworkAt(canvas.width / 3, canvas.height * 0.4);
+                    launchFireworkAt(canvas.width * 2 / 3, canvas.height * 0.4);
+                    break;
+                case 2: // 三点一线
+                    launchFireworkAt(canvas.width / 4, canvas.height * 0.5);
+                    launchFireworkAt(canvas.width / 2, canvas.height * 0.3);
+                    launchFireworkAt(canvas.width * 3 / 4, canvas.height * 0.5);
+                    break;
+                case 3: // 四角
+                    launchFireworkAt(canvas.width / 4, canvas.height * 0.3);
+                    launchFireworkAt(canvas.width * 3 / 4, canvas.height * 0.3);
+                    launchFireworkAt(canvas.width / 4, canvas.height * 0.6);
+                    launchFireworkAt(canvas.width * 3 / 4, canvas.height * 0.6);
+                    break;
+                case 4: // 随机多点
+                    for (let i = 0; i < 3; i++) {
+                        launchRandomFirework();
+                    }
+                    break;
+            }
+            
+            patternSubStep = (patternSubStep + 1) % 5;
+            
+            // 每完成一轮，增加步骤
+            if (patternSubStep === 0) {
+                patternStep++;
+                
+                // 当达到最后一步时，触发盛大终章爆炸
+                if (patternStep === 3) {
+                    setTimeout(createGrandFinale, 1000);
+                }
+            }
+        }
+        
+        // 盛大终章爆炸效果
+        function createGrandFinale() {
+            // 创建中心大爆炸
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height * 0.4;
+            
+            // 播放特殊音效
+            playGrandFinaleSound();
+            
+            // 创建一个特大号烟花
+            fireworks.push(new Firework(
+                centerX,
+                canvas.height,
+                centerX,
+                centerY,
+                '#ffffff', // 白色
+                500, // 更多粒子
+                'multi', // 多彩爆炸
+                true // 标记为终章特效
+            ));
+            
+            // 播放烟花爆炸声
+            playFireworkBoom(1.0);
+            
+            // 延迟后创建环形爆炸
+            setTimeout(() => {
+                const radius = Math.min(canvas.width, canvas.height) * 0.3;
+                const points = 16; // 增加环上的点数
+                
+                for (let i = 0; i < points; i++) {
+                    const angle = (i / points) * Math.PI * 2;
+                    const x = centerX + Math.cos(angle) * radius;
+                    const y = centerY + Math.sin(angle) * radius;
+                    
+                    // 创建环形爆炸点
+                    setTimeout(() => {
+                        fireworks.push(new Firework(
+                            x,
+                            y,
+                            x,
+                            y,
+                            getRandomColor(),
+                            180,
+                            'burst',
+                            true
+                        ));
+                        
+                        // 播放音效
+                        playExplosionSound('burst');
+                        playFireworkBoom(0.3);
+                    }, i * 80); // 加快触发速度
+                }
+                
+                // 同时在中心创建一个额外的大爆炸
+                setTimeout(() => {
+                    fireworks.push(new Firework(
+                        centerX,
+                        centerY,
+                        centerX,
+                        centerY,
+                        '#ffff00', // 明亮的黄色
+                        400,
+                        'ring',
+                        true
+                    ));
+                    playFireworkBoom(0.7);
+                }, points * 40);
+            }, 500);
+            
+            // 再延迟后创建最终爆炸
+            setTimeout(() => {
+                // 创建多个随机爆炸，覆盖整个屏幕
+                for (let i = 0; i < 20; i++) { // 增加爆炸数量
+                    setTimeout(() => {
+                        const x = Math.random() * canvas.width;
+                        const y = Math.random() * canvas.height * 0.7;
+                        
+                        fireworks.push(new Firework(
+                            x,
+                            y,
+                            x,
+                            y,
+                            getRandomColor(),
+                            120 + Math.random() * 150,
+                            ['stars', 'ring', 'heart', 'normal', 'multi'][Math.floor(Math.random() * 5)],
+                            true
+                        ));
+                        
+                        // 播放音效
+                        playExplosionSound();
+                        playFireworkBoom(0.2 + Math.random() * 0.3);
+                    }, i * 100);
+                }
+            }, 1500);
+            
+            // 最终的超级爆炸
+            setTimeout(() => {
+                // 创建一个覆盖全屏的多层爆炸
+                const layers = 5;
+                const explosionsPerLayer = 8;
+                
+                for (let layer = 0; layer < layers; layer++) {
+                    const layerRadius = (layer + 1) * (Math.min(canvas.width, canvas.height) * 0.15);
+                    
+                    setTimeout(() => {
+                        for (let i = 0; i < explosionsPerLayer; i++) {
+                            const angle = (i / explosionsPerLayer) * Math.PI * 2;
+                            const x = centerX + Math.cos(angle) * layerRadius;
+                            const y = centerY + Math.sin(angle) * layerRadius;
+                            
+                            // 为每层选择不同的颜色
+                            const layerColors = [
+                                ['#ff0000', '#ff5500', '#ffaa00'], // 红橙
+                                ['#ffcc00', '#ffff00', '#aaff00'], // 黄绿
+                                ['#00ff00', '#00ffaa', '#00ffff'], // 绿青
+                                ['#0088ff', '#0000ff', '#8800ff'], // 蓝紫
+                                ['#ff00ff', '#ff0088', '#ff0044']  // 紫粉
+                            ];
+                            
+                            const color = layerColors[layer][Math.floor(Math.random() * 3)];
+                            
+                            fireworks.push(new Firework(
+                                x,
+                                y,
+                                x,
+                                y,
+                                color,
+                                200,
+                                layer % 2 === 0 ? 'burst' : 'stars',
+                                true
+                            ));
+                            
+                            // 播放音效
+                            if (i === 0) {
+                                playFireworkBoom(0.5);
+                            }
+                        }
+                    }, layer * 300);
+                }
+                
+                // 最中心的超大爆炸
+                setTimeout(() => {
+                    fireworks.push(new Firework(
+                        centerX,
+                        centerY,
+                        centerX,
+                        centerY,
+                        '#ffffff',
+                        800, // 极多粒子
+                        'super', // 新增超级爆炸类型
+                        true
+                    ));
+                    
+                    // 播放最响的爆炸声
+                    playFireworkBoom(1.5);
+                    
+                    // 屏幕闪烁效果
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // 震动效果
+                    if (window.navigator.vibrate) {
+                        window.navigator.vibrate(200);
+                    }
+                }, layers * 300 + 200);
+            }, 3000);
+        }
+        
+        // 在指定位置发射烟花
+        function launchFireworkAt(targetX, targetY) {
+            // 从底部随机位置发射
+            const startX = Math.random() * canvas.width;
+            const startY = canvas.height;
+            
+            // 选择烟花类型
+            const type = currentChapter.types[Math.floor(Math.random() * currentChapter.types.length)];
+            
+            // 选择粒子数量
+            const minParticles = currentChapter.particleCount[0];
+            const maxParticles = currentChapter.particleCount[1];
+            const particleCount = Math.floor(Math.random() * (maxParticles - minParticles + 1)) + minParticles;
+            
+            // 选择颜色
+            let color;
+            if (currentChapter.colors) {
+                color = currentChapter.colors[Math.floor(Math.random() * currentChapter.colors.length)];
+            } else {
+                color = getRandomColor();
+            }
+            
+            // 创建烟花
+            fireworks.push(new Firework(
+                startX,
+                startY,
+                targetX,
+                targetY,
+                color,
+                particleCount,
+                type,
+                false // 不是终章特效
+            ));
+            
+            // 播放对应类型的音效
+            playExplosionSound(type);
+        }
+        
+        // 随机发射烟花
+        function launchRandomFirework() {
+            // 随机目标位置
+            const targetX = Math.random() * canvas.width;
+            const targetY = Math.random() * (canvas.height * 0.6);
+            
+            launchFireworkAt(targetX, targetY);
+        }
+        
+        // 动画循环
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // 清空画布
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 更新章节系统
+            updateChapterSystem();
+            
+            // 更新和绘制烟花
+            for (let i = 0; i < fireworks.length; i++) {
+                fireworks[i].update();
+                fireworks[i].draw();
+            }
+            
+            // 移除已完成的烟花
+            for (let i = fireworks.length - 1; i >= 0; i--) {
+                if (fireworks[i].isFinished()) {
+                    fireworks.splice(i, 1);
+                }
+            }
+        }
+        
+        // 启动动画
+        animate();
+        
+        // 连续发射多个烟花
+        function launchFireworks() {
+            // 禁用按钮
+            document.getElementById('launchButton').style.pointerEvents = 'none';
+            
+            // 初始化音频
+            initAudio();
+            
+            // 启动章节系统
+            chapterIndex = 0;
+            startChapter(chapterIndex);
+        }
+        
+        // 点击火箭发射烟花
+        document.getElementById('launchButton').addEventListener('click', () => {
+            launchFireworks();
+        });
+        
+        // 点击画布也可以发射烟花
+        canvas.addEventListener('click', (e) => {
+            if (document.getElementById('launchButton').style.pointerEvents !== 'none' && !currentChapter) {
+                const targetX = e.clientX;
+                const targetY = e.clientY;
+                
+                // 从底部发射
+                const startX = Math.random() * canvas.width;
+                const startY = canvas.height;
+                
+                // 随机选择烟花类型
+                const types = ['normal', 'ring', 'burst', 'heart', 'spiral', 'multi', 'stars'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                
+                // 创建烟花
+                fireworks.push(new Firework(
+                    startX,
+                    startY,
+                    targetX,
+                    targetY,
+                    getRandomColor(),
+                    Math.floor(Math.random() * 150) + 50,
+                    type,
+                    false // 不是终章特效
+                ));
+                
+                // 初始化音频（如果尚未初始化）
+                if (!audioEnabled) {
+                    initAudio();
+                }
+                
+                // 播放音效
+                playExplosionSound(type);
+            }
+        });
+        
+        // 添加真实的烟花爆炸声音
+        function playFireworkBoom(volume = 1.0) {
+            if (!audioEnabled || !audioContext) return;
+            
+            // 创建噪声源
+            const bufferSize = audioContext.sampleRate / 2;
+            const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            
+            // 生成爆炸噪声 - 开始强然后迅速衰减
+            for (let i = 0; i < bufferSize; i++) {
+                // 指数衰减
+                const decay = Math.exp(-3 * i / bufferSize);
+                // 添加一些随机变化
+                output[i] = (Math.random() * 2 - 1) * decay;
+            }
+            
+            // 创建噪声源
+            const noise = audioContext.createBufferSource();
+            noise.buffer = noiseBuffer;
+            
+            // 创建滤波器模拟烟花爆炸声音特性
+            const filter = audioContext.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 300 + Math.random() * 700;
+            filter.Q.value = 0.7;
+            
+            // 创建增益节点控制音量
+            const gainNode = audioContext.createGain();
+            gainNode.gain.value = volume * 0.4; // 控制音量
+            
+            // 连接节点
+            noise.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(masterGain);
+            
+            // 添加一些混响效果
+            const convolver = audioContext.createConvolver();
+            const convolverBuffer = audioContext.createBuffer(2, audioContext.sampleRate * 2, audioContext.sampleRate);
+            const convolverL = convolverBuffer.getChannelData(0);
+            const convolverR = convolverBuffer.getChannelData(1);
+            
+            // 创建简单的混响
+            for (let i = 0; i < convolverBuffer.length; i++) {
+                convolverL[i] = (Math.random() * 2 - 1) * Math.exp(-5 * i / convolverBuffer.length);
+                convolverR[i] = (Math.random() * 2 - 1) * Math.exp(-5 * i / convolverBuffer.length);
+            }
+            
+            convolver.buffer = convolverBuffer;
+            
+            // 分离一部分信号通过混响
+            const reverbGain = audioContext.createGain();
+            reverbGain.gain.value = 0.2;
+            
+            filter.connect(reverbGain);
+            reverbGain.connect(convolver);
+            convolver.connect(masterGain);
+            
+            // 播放声音
+            noise.start();
+            noise.stop(audioContext.currentTime + 2);
+        }
+        
+        // 修改终章特效音效
+        function playGrandFinaleSound() {
+            if (!audioEnabled || !audioContext) return;
+            
+            // 创建一个更壮观的和弦序列
+            const chords = [
+                ['C4', 'E4', 'G4'],
+                ['F4', 'A4', 'C5'],
+                ['G4', 'B4', 'D5'],
+                ['C5', 'E5', 'G5'],
+                ['F5', 'A5', 'C6']  // 添加更高的和弦
+            ];
+            
+            const noteToFreq = {
+                'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'B4': 493.88,
+                'C5': 523.25, 'D5': 587.33, 'E5': 659.25, 'F5': 698.46, 'G5': 783.99, 'A5': 880.00, 'B5': 987.77,
+                'C6': 1046.50, 'D6': 1174.66, 'E6': 1318.51, 'F6': 1396.91, 'G6': 1567.98
+            };
+            
+            // 播放壮观的和弦序列
+            chords.forEach((chord, chordIndex) => {
+                setTimeout(() => {
+                    // 为每个和弦中的音符创建振荡器
+                    chord.forEach(note => {
+                        const oscillator = audioContext.createOscillator();
+                        const gainNode = audioContext.createGain();
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(masterGain);
+                        
+                        // 使用不同的波形
+                        oscillator.type = ['sine', 'triangle'][chordIndex % 2];
+                        oscillator.frequency.value = noteToFreq[note];
+                        
+                        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                        gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.1);
+                        gainNode.gain.linearRampToValueAtTime(0.05, audioContext.currentTime + 0.5);
+                        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1.5);
+                        
+                        oscillator.start();
+                        oscillator.stop(audioContext.currentTime + 1.5);
+                        
+                        // 添加泛音
+                        if (chordIndex > 1) {
+                            const harmonicOsc = audioContext.createOscillator();
+                            const harmonicGain = audioContext.createGain();
+                            
+                            harmonicOsc.connect(harmonicGain);
+                            harmonicGain.connect(masterGain);
+                            
+                            harmonicOsc.type = 'sine';
+                            harmonicOsc.frequency.value = noteToFreq[note] * 2; // 八度泛音
+                            
+                            harmonicGain.gain.setValueAtTime(0, audioContext.currentTime);
+                            harmonicGain.gain.linearRampToValueAtTime(0.03, audioContext.currentTime + 0.1);
+                            harmonicGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 1.2);
+                            
+                            harmonicOsc.start();
+                            harmonicOsc.stop(audioContext.currentTime + 1.2);
+                        }
+                    });
+                    
+                    // 添加打击乐效果
+                    if (chordIndex > 0) {
+                        const noise = audioContext.createBufferSource();
+                        const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.1, audioContext.sampleRate);
+                        const noiseData = noiseBuffer.getChannelData(0);
+                        
+                        for (let i = 0; i < noiseBuffer.length; i++) {
+                            noiseData[i] = Math.random() * 2 - 1;
+                        }
+                        
+                        const noiseGain = audioContext.createGain();
+                        const noiseFilter = audioContext.createBiquadFilter();
+                        
+                        noise.buffer = noiseBuffer;
+                        noise.connect(noiseFilter);
+                        noiseFilter.connect(noiseGain);
+                        noiseGain.connect(masterGain);
+                        
+                        noiseFilter.type = 'bandpass';
+                        noiseFilter.frequency.value = 1000 + chordIndex * 500;
+                        noiseFilter.Q.value = 1;
+                        
+                        noiseGain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        noiseGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2);
+                        
+                        noise.start();
+                        noise.stop(audioContext.currentTime + 0.2);
+                    }
+                }, chordIndex * 500); // 每500毫秒播放一个和弦
+            });
+        }
+    </script>
+</body>
+</html> 
